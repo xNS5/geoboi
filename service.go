@@ -1,10 +1,14 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -22,7 +26,37 @@ func IsOnline() bool {
 	return true
 }
 
+func GetIanaName() (string, error) {
+    linkPath := "/etc/localtime"
+    targetPath, err := os.Readlink(linkPath)
+    if err != nil {
+        return "", err
+    }
+
+    tzParts := strings.Split(targetPath, "/")
+    if len(tzParts) < 3 {
+        return "", errors.New("invalid timezone format")
+    }
+
+    continent, country := tzParts[len(tzParts)-2], tzParts[len(tzParts)-1]
+    timezone := fmt.Sprintf("%s/%s", continent, country)
+
+    _, err = time.LoadLocation(timezone)
+    if err != nil {
+        return "", err
+    }
+
+    return timezone, nil
+}
+
 func execTzChange(){
+
+	currTz, err := GetIanaName()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	ipapiClient := http.Client{}
 
 	req, err := http.NewRequest("GET", "https://ipapi.co/json/", nil)
@@ -30,7 +64,6 @@ func execTzChange(){
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("First Request", req)
 
 	req.Header.Set("User-Agent", "ipapi.co/#go-v1.3")
 
@@ -46,7 +79,10 @@ func execTzChange(){
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(string(body))
+	var inputJson map[string]interface{}
+
+	json.Unmarshal([]byte(string(body)), &inputJson)
+
 }
 
 func main() {
