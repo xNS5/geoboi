@@ -51,10 +51,11 @@ func GetIanaName() (string, error) {
 
 func execTzChange(){
 
-	currTz, err := GetIanaName()
+	sysTz, err := GetIanaName()
 
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
 
 	ipapiClient := http.Client{}
@@ -82,6 +83,12 @@ func execTzChange(){
 	var inputJson map[string]interface{}
 
 	json.Unmarshal([]byte(string(body)), &inputJson)
+	
+	ipGeoTz := inputJson["timezone"].(string)
+
+	if ipGeoTz != sysTz {
+		os.Setenv("TZ", ipGeoTz)
+	}
 
 }
 
