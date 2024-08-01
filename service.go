@@ -113,7 +113,6 @@ func execTzChange(){
 		log.Printf("Timezone is not valid: %s", tempTz)
 	} else if (ipGeoTz != sysTz) {
 		timezonePath := filepath.Join(timezoneDir, ipGeoTz)
-		fmt.Println(timezonePath)
 
 		if _, err := os.Stat(tempTz); os.IsNotExist(err) {
 			log.Fatalf("Timezone file does not exist: %s", tempTz)
