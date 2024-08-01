@@ -8,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -49,8 +51,25 @@ func GetIanaName() (string, error) {
     return timezone, nil
 }
 
-func execTzChange(){
+func ValidateIanaName(timezone string) (bool, error) {
 
+	validTimezoneRegex := `^[A-Za-z]+(/[A-Za-z_-]+)+$`
+    matched, err := regexp.MatchString(validTimezoneRegex, timezone)
+
+	if err != nil {
+        return false, fmt.Errorf("Error compiling regex: %v", err)
+    }
+
+    if !matched {
+        return false, fmt.Errorf("Invalid timezone format: %s", timezone)
+    }
+
+	return true, nil
+}
+
+func execTzChange(){
+	timezoneDir := "/usr/share/zoneinfo"
+    // localtimePath := "/etc/localtime"
 	sysTz, err := GetIanaName()
 
 	if err != nil {
@@ -80,22 +99,40 @@ func execTzChange(){
 	if err != nil {
 		log.Fatal(err)
 	}
+	
 	var inputJson map[string]interface{}
 
 	json.Unmarshal([]byte(string(body)), &inputJson)
 	
 	ipGeoTz := inputJson["timezone"].(string)
+	tempTz := "America/Los_Angeles"
+	// Checking to make sure that someone isn't trying to pass malicious code in the ipGeoTz string
+	isValid, err := ValidateIanaName(tempTz)
 
-	if ipGeoTz != sysTz {
-		os.Setenv("TZ", ipGeoTz)
+	if !isValid {
+		log.Printf("Timezone is not valid: %s", tempTz)
+	} else if (ipGeoTz != sysTz) {
+		timezonePath := filepath.Join(timezoneDir, ipGeoTz)
+		fmt.Println(timezonePath)
+
+		if _, err := os.Stat(tempTz); os.IsNotExist(err) {
+			log.Fatalf("Timezone file does not exist: %s", tempTz)
+		} else {
+			log.Println("Timezone is valid")
+		}
+		// else if err := os.Remove(localtimePath); err != nil {
+		// 	log.Fatal("Error removing current localtime: %v", err)
+		// } else if err := os.Symlink(timezonePath, localtimePath); err != nil {
+		// 	log.Fatal("Error creating symlink: %v", err)
+		// }
+		log.Println("Timezones do not match, changing....")
 	}
-
 }
 
 func main() {
 	isOnline := IsOnline()
 
-	if isOnline == false {
+	if isOnline {
 		for i := 0; i < 100; i++ {
 			time.Sleep(2 * time.Second)
 			if IsOnline() == true {
