@@ -68,7 +68,8 @@ func main() {
 	isOnline := IsOnline()
 
 	if !isOnline {
-		for i := 0; i < 30; i++ {
+		// For each iteration, time out for two seconds. Total time out is going to be 2 minutes.
+		for i := 0; i < 60; i++ {
 			log.Println("Unable to connect to internet, trying again...")
 			time.Sleep(2 * time.Second)
 			if IsOnline() == true {
