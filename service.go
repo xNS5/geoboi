@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
-	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -23,44 +23,61 @@ func IsOnline() bool {
 }
 
 func execTzChange(){
-	ipapiClient := http.Client{}
+	timezoneDir := "/usr/share/zoneinfo"
+    localtimePath := "/etc/localtime"
 
-	req, err := http.NewRequest("GET", "https://ipapi.co/json/", nil)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("First Request", req)
-
-	req.Header.Set("User-Agent", "ipapi.co/#go-v1.3")
-
-	resp, err := ipapiClient.Do(req)
+	sysTz, err := GetLocalIanaName()
 
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
 
-	defer resp.Body.Close()
+	ipGeoTz := GetRemoteIanaName()
+	
+	// Checking to make sure that someone isn't trying to pass malicious code in the ipGeoTz string
+	isValid, err := ValidateIanaName(ipGeoTz)
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
+	if !isValid {
+		log.Fatalf("Timezone is not valid: %s", ipGeoTz)
+	} else if (ipGeoTz != sysTz) {
+		timezonePath := filepath.Join(timezoneDir, ipGeoTz)
+
+		if _, err := os.Stat(timezonePath); os.IsNotExist(err) {
+			log.Fatalf("Timezone path does not exist: %v", err)
+			return
+		} else {
+			log.Printf("Valid Timezone: %s", ipGeoTz)
+		}
+		
+		if err := os.Remove(localtimePath); err != nil {
+			log.Fatalf("Error removing current localtime: %v", err)
+			return
+		} else if err := os.Symlink(timezonePath, localtimePath); err != nil {
+			log.Fatalf("Error creating symlink: %v", err)
+			return
+		} else {
+			log.Printf("Timezone successfully changed to: %s", ipGeoTz)
+		}
+	} else {
+		log.Println("Time zones unchanged")
 	}
-	fmt.Println(string(body))
 }
 
 func main() {
 	isOnline := IsOnline()
 
-	if isOnline == false {
-		for i := 0; i < 100; i++ {
+	if !isOnline {
+		// For each iteration, time out for two seconds. Total time out is going to be 2 minutes.
+		for i := 0; i < 60; i++ {
+			log.Println("Unable to connect to internet, trying again...")
 			time.Sleep(2 * time.Second)
 			if IsOnline() == true {
 				execTzChange()
-				break
+				return
 			}
-
 		}
+		log.Fatalln("Unable to connect to the internet")
 	} else {
 		execTzChange()
 	}
