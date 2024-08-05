@@ -24,7 +24,7 @@ fi
 
 echo "Building Geoboi..."
 
-$GO build -o "$GOBIN"
+$GO build -o "$GOBIN/"
 
 if [ $? != 0 ]; then
   echo "Build failed"
