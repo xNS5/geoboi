@@ -2,38 +2,27 @@ package main
 
 import (
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 )
 
-func IsOnline() bool {
-	timeout := time.Duration(5000 * time.Millisecond)
-	client := http.Client{
-		Timeout: timeout,
-	}
-	_, err := client.Get("https://google.com")
-
-	if err != nil {
-		return false
-	}
-
-	return true
-}
-
-func execTzChange(){
+func main() {
 	timezoneDir := "/usr/share/zoneinfo"
     localtimePath := "/etc/localtime"
 
 	sysTz, err := GetLocalIanaName()
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error getting local iana name: %v", err)
 		return
 	}
 
-	ipGeoTz := GetRemoteIanaName()
+	ipGeoTz, err := GetRemoteIanaName()
+
+	if err != nil {
+		log.Fatalf("Error getting remote iana name: %v", err)
+		return
+	}
 	
 	// Checking to make sure that someone isn't trying to pass malicious code in the ipGeoTz string
 	isValid, err := ValidateIanaName(ipGeoTz)
@@ -60,25 +49,6 @@ func execTzChange(){
 			log.Printf("Timezone successfully changed to: %s", ipGeoTz)
 		}
 	} else {
-		log.Println("Time zones unchanged")
-	}
-}
-
-func main() {
-	isOnline := IsOnline()
-
-	if !isOnline {
-		// For each iteration, time out for two seconds. Total time out is going to be 2 minutes.
-		for i := 0; i < 60; i++ {
-			log.Println("Unable to connect to internet, trying again...")
-			time.Sleep(2 * time.Second)
-			if IsOnline() == true {
-				execTzChange()
-				return
-			}
-		}
-		log.Fatalln("Unable to connect to the internet")
-	} else {
-		execTzChange()
+		log.Println("Time zone unchanged")
 	}
 }
