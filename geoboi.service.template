@@ -12,7 +12,7 @@ StartLimitBurst=12
 
 # Add path to Geoboi executable here
 
-ExecStart=[/path/to/your/executable]
+ExecStart=
  
 [Install]
 WantedBy=multi-user.target

@@ -10,6 +10,17 @@ function symlink_service {
   sudo ln -sf "$(pwd)/$SERVICE_FILE" "$TARGET_PATH"
 }
 
+function reload_service {
+  sudo systemctl daemon-reload
+
+  if [ $? != 0 ]; then
+      echo "Reloading failed"
+      exit 1
+  else
+      echo "Reload successful"
+  fi
+}
+
 if [ "$EUID" -ne 0 ]; then
   echo "This script must be run with elevated permissions (as root)."
   exit 1
@@ -19,7 +30,7 @@ if [ ! -f "$SERVICE_FILE" ]; then
   echo "Service file $SERVICE_FILE not found in the current directory."
   echo "Creating $SERVICE_FILE from template..."
   cp $SERVICE_TEMPLATE $SERVICE_FILE
-  sed -i -r 's|ExecStart=[\/path\/to\/your\/executable]|ExecStart='"$GOBIN"'/geoboi|' $SERVICE_FILE
+  sed -i "s|ExecStart=|ExecStart=$GOBIN/geoboi|" $SERVICE_FILE
 fi
 
 echo "Building Geoboi..."
@@ -32,12 +43,8 @@ if [ $? != 0 ]; then
 fi
 
 echo "Geoboi built successfully."
-echo "Reloading systemd daemon..."
-sudo systemctl daemon-reload
 
-if [ $? != 0 ]; then
-    echo "Reloading failed"
-    exit 1
-else
-    echo "Reload successful"
-fi
+symlink_service
+
+echo "Reloading systemd daemon..."
+reload_service
