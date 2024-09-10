@@ -10,13 +10,11 @@ import (
 func GetRemoteIanaName() (string, error) {
 	ipapiClient := http.Client{}
 
-	req, err := http.NewRequest("GET", "https://ipapi.co/json/", nil)
+	req, err := http.NewRequest("GET", "http://ip-api.com/json/", nil)
 
 	if err != nil {
 		return "", err
 	}
-
-	req.Header.Set("User-Agent", "ipapi.co/#go-v1.3")
 
 	resp, err := ipapiClient.Do(req)
 
